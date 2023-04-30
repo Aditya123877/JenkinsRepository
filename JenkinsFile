@@ -1,0 +1,71 @@
+pipeline {
+    agent any
+
+    stages {
+        stage('Build') {
+            steps {
+                echo "Building the code..."
+                sh 'mvn clean package'
+            }
+        }
+        stage('Unit and Integration Tests') {
+            steps {
+                echo "Running unit tests..."
+                sh 'mvn test'
+                echo "Running integration tests..."
+                sh 'mvn verify'
+            }
+            post{
+                always{
+                    mail to: "adityagahlot2002@gmail.com",
+                    subject: "Test Unit & Integration"
+                    body: "Test status attached"
+                }
+            }
+        }
+        stage('Code Analysis') {
+            steps {
+                echo 'Running code analysis...'
+                sh 'mvn checkstyle:checkstyle findbugs:findbugs pmd:pmd'
+            }
+        }
+        
+        stage('Security Scan') {
+            steps {
+                echo "Running security scan..."
+                sh 'npm install -g snyk && snyk test'
+            }
+            post{
+                always{
+                    mail to: "adityagahlot2002@gmail.com",
+                    subject: "Scan for Security"
+                    body: "See security report"
+                }
+            }
+        }
+
+        
+        stage('Deploy to Staging') {
+            steps {
+                echo "Deploying to staging server..."
+                sh 'ssh -i /path/to/key.pem ec2-user@ec2-xx-xxx-xxx-xxx.compute-1.amazonaws.com "cd /path/to/app && git pull && npm install && pm2 restart app"'
+            }
+        }
+        
+        stage('Integration Tests on Staging') {
+            steps {
+                echo "Running integration tests on staging environment..."
+                sh 'npm run test:integration'
+            }
+        }
+         stage('Deploy to Production') {
+            steps {
+                echo 'Deploying application to production server...'
+                sh 'npm run deploy:production'
+            }
+        }
+    }
+}
+
+
+
